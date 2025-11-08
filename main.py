@@ -1,28 +1,13 @@
 import os
-import time
-import requests
-from flask import Flask, jsonify, request, abort
+from flask import Flask, request, jsonify, abort
 
 app = Flask(__name__)
 
-# Token secreto (vamos configurar isto no Render depois)
-SECRET_TOKEN = os.environ.get("RO_X_TOKEN", "meu_token_seguro")
-
-# Cache simples (para não abusar do ip-api)
-CACHE_TTL = 60  # segundos
-cache = {}
-
-def get_cached(key):
-    if key in cache:
-        ts, data = cache[key]
-        if time.time() - ts < CACHE_TTL:
-            return data
-        else:
-            del cache[key]
-    return None
-
-def set_cache(key, data):
-    cache[key] = (time.time(), data)
+SECRET_TOKEN = os.environ.get("RO_X_TOKEN", "1234")
+COUNTRY_TO_CITY = {
+    "PT": "Lisbon, Portugal",
+    "US": "Portland, US",
+}
 
 @app.route("/server-loc", methods=["POST"])
 def server_loc():
@@ -30,18 +15,22 @@ def server_loc():
     if token != SECRET_TOKEN:
         abort(401, "Token inválido")
 
-    cached = get_cached("ip-api")
-    if cached:
-        return jsonify({"from_cache": True, "data": cached})
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Nenhum dado recebido"}), 400
 
-    try:
-        resp = requests.get("http://ip-api.com/json/", timeout=5)
-        data = resp.json()
-        set_cache("ip-api", data)
-        return jsonify({"from_cache": False, "data": data})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    player_name = data.get("name", "Unknown")
+    user_id = data.get("userId", 0)
+    country_code = data.get("country", "US")
+
+    location = COUNTRY_TO_CITY.get(country_code, "Unknown Location")
+
+    return jsonify({
+        "player": player_name,
+        "userId": user_id,
+        "location": location
+    })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
