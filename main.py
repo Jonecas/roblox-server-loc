@@ -24,7 +24,7 @@ def get_cached(key):
 def set_cache(key, data):
     cache[key] = (time.time(), data)
 
-@app.route("/server-loc", methods=["GET"])
+@app.route("/server-loc", methods=["POST"])
 def server_loc():
     token = request.headers.get("X-Game-Token") or request.args.get("token")
     if token != SECRET_TOKEN:
@@ -44,3 +44,4 @@ def server_loc():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
